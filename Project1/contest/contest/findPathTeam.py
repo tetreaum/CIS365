@@ -83,19 +83,21 @@ class DummyAgent(CaptureAgent):
     """
     Picks among actions randomly.
     """
-    # nearestFoodDistance = 9999
-    # nearestFood = (1,1)
-    # for food in self.getFood(gameState).asList():
-    #   dist = self.getMazeDistance(gameState.getAgentPosition(self.index),food)   
-    #   if dist < nearestFoodDistance:
-    #     nearestFoodDistance = dist
-    #     nearestFood = food
-
-    # return self.findPath(gameState, nearestFood)
 
     return self.findPath(gameState, (10,11))
 
+    # nearestFood = self.findNearestFood(gameState)
+    # return self.findPath(gameState,nearestFood)
 
+  def findNearestFood(self, gameState):
+    nearestFoodDistance = 9999
+    nearestFood = (1,1)
+    for food in self.getFood(gameState).asList():
+      dist = self.getMazeDistance(gameState.getAgentPosition(self.index),food)   
+      if dist < nearestFoodDistance:
+        nearestFoodDistance = dist
+        nearestFood = food
+    return nearestFood
 
   def findPath(self, gameState, position):
     bestDist = 9999

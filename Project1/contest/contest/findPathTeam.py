@@ -174,6 +174,40 @@ class NorthAgent(DummyAgent):
         self.hidingSpot[0] = self.start[0]/2 + 1
         self.hidingspot[1] = self.start[1]
         return self.findPath(gameState, self.hidingSpot)
+      
+    
+    #Generic Attacking
+	if self.inHiding == False:
+     
+		def getFeatures(self, gameState, action):
+			features = util.Counter()
+			successor = self.getSuccessor(gameState, action)
+		
+		myState = successor.getAgentState(self.index)
+		myPos = myState.getPosition()
+		
+		foodList = self.getFood(successor).asList()
+		features['successorScore'] = -len(foodList)
+	
+    # Compute distance to the nearest food
+    if len(foodList) > 0: 
+      myPos = successor.getAgentState(self.index).getPosition()
+      minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+      features['distanceToFood'] = minDistance
+      
+      features['closeEnemy'] = 0
+      enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+      risk = [a for a in enemies if not a.isPacman and a.getPosition != None]
+      if len(risk) > 0:
+      	dists = [self.getMazeDistance(myPos, a.getPosition()) for a in risk]
+      	features['enemyDistance'] = min(dists)
+      	if (dist <= 4 for dist in dists):
+      		features['closeEnemy'] = 1
+	
+    return features
+
+  def getWeights(self, gameState, action):
+    return {'successorScore': 100, 'distanceToFood': -1, 'risk': -1, 'closeEnemy': -100}
 
 class SouthAgent(DummyAgent):
 

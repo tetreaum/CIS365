@@ -24,7 +24,7 @@ from util import nearestPoint
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'DummyAgent', second = 'DummyAgent'):
+               first = 'NorthAgent', second = 'SouthAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -73,18 +73,25 @@ class DummyAgent(CaptureAgent):
     on initialization time, please take a look at
     CaptureAgent.registerInitialState in captureAgents.py.
     '''
+    # This counter tells us when to hide/attack
+    self.counter = 0
+    self.inHiding = False
+    # Hold the coordinates for where we'll hide
+    self.hidingSpot = [0, 0]
+    self.start = gameState.getAgentPosition(self.index)
     CaptureAgent.registerInitialState(self, gameState)
     '''
     Your initialization code goes here, if you need any.
     '''
 
+  # def chooseAction(self, gameState):
+  #   """
+  #   Picks among actions randomly.
+  #   """
+  #   if self.counter == 0:
+  #     return self.findPath(gameState, ())
 
-  def chooseAction(self, gameState):
-    """
-    Picks among actions randomly.
-    """
-
-    return self.findPath(gameState, (10,11))
+  #   return self.findPath(gameState, (10,11))
 
     # nearestFood = self.findNearestFood(gameState)
     # return self.findPath(gameState,nearestFood)
@@ -118,3 +125,93 @@ class DummyAgent(CaptureAgent):
       return successor.generateSuccessor(self.index, action)
     else:
       return successor
+
+  
+  #Determine which color team is, this is used to determine hiding location
+  def getColor(self, gameState):
+    # self.start = gameState.getAgentPosition(self.index)
+    # Red team starts at x = 1, blue is at x = 30 
+    if self.start[0] < 2:
+      return "Red"
+    else:
+      return "Blue"
+
+class NorthAgent(DummyAgent):
+
+  def chooseAction(self, gameState):
+
+    team = self.getTeam(gameState)
+    opp = self.getOpponents(gameState)
+    
+    if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
+      self.inHiding = True
+    
+    if self.inHiding == True:
+      turnsToWait = 10
+      # if self.counter == numturns to wait
+        # hiding = false
+        # return stop action
+        # increment turn counter
+      if self.counter == turnsToWait:
+        self.inHiding = False
+      # else
+      #   find path to spot
+      else:
+        self.counter += 1
+        return self.findPath(gameState, self.hidingSpot)
+
+    #Get hiding location and go there
+    else:
+      if self.getColor == "Red": # Red team
+        # Used to determine x coordinate of hiding location
+        blueStart = gameState.getAgentPosition(opp[0])
+        # X is 14 and Y is 14/13
+        self.hidingSpot[0] = blueStart[0]/2 - 1
+        self.hidingspot[1] = self.start[1]
+        return self.findPath(gameState, self.hidingSpot)
+      elif self.getColor == "Blue": # Blue Team
+        # X is 16 and Y is 14 or 13
+        self.hidingSpot[0] = self.start[0]/2 + 1
+        self.hidingspot[1] = self.start[1]
+        return self.findPath(gameState, self.hidingSpot)
+
+class SouthAgent(DummyAgent):
+
+  def chooseAction(self, gameState):
+
+    team = self.getTeam(gameState)
+    opp = self.getOpponents(gameState)
+    
+    if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
+      self.inHiding = True
+    
+    if self.inHiding == True:
+      turnsToWait = 10
+      # if self.counter == numturns to wait
+        # hiding = false
+        # return stop action
+        # increment turn counter
+      if self.counter == turnsToWait:
+        self.inHiding = False
+      # else
+      #   find path to spot
+      else:
+        self.counter += 1
+        return self.findPath(gameState, self.hidingSpot)
+
+    #Get hiding location and go there
+    else:
+      if self.getColor == "Red": # Red team
+        # Used to determine x coordinate of hiding location
+        blueStart = gameState.getAgentPosition(opp[0])
+        # X is 14 and Y is 1 or 2
+        self.hidingSpot[0] = blueStart[0]/2 - 1
+        self.hidingspot[1] = self.start[1]
+        return self.findPath(gameState, self.hidingSpot)
+      elif self.getColor == "Blue": # Blue Team
+        # Used to determine y coordinate of hiding location
+        redStart = gameState.getAgentPosition(opp[0])
+        # X is 16 and Y is 1 or 2
+        self.hidingSpot[0] = self.start[0]/2 + 1
+        self.hidingspot[1] = redStart[1]
+        return self.findPath(gameState, self.hidingSpot)

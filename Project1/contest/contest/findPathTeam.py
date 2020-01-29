@@ -177,17 +177,17 @@ class NorthAgent(DummyAgent):
       
     
     #Generic Attacking
-	if self.inHiding == False:
+    if self.inHiding == False:
      
-		def getFeatures(self, gameState, action):
-			features = util.Counter()
-			successor = self.getSuccessor(gameState, action)
+	def getFeatures(self, gameState, action):
+	    features = util.Counter()
+	    successor = self.getSuccessor(gameState, action)
 		
-		myState = successor.getAgentState(self.index)
-		myPos = myState.getPosition()
+	myState = successor.getAgentState(self.index)
+	myPos = myState.getPosition()
 		
-		foodList = self.getFood(successor).asList()
-		features['successorScore'] = -len(foodList)
+	foodList = self.getFood(successor).asList()
+	features['successorScore'] = -len(foodList)
 	
     # Compute distance to the nearest food
     if len(foodList) > 0: 
@@ -203,7 +203,6 @@ class NorthAgent(DummyAgent):
       	features['enemyDistance'] = min(dists)
       	if (dist <= 4 for dist in dists):
       		features['closeEnemy'] = 1
-	
     return features
 
   def getWeights(self, gameState, action):

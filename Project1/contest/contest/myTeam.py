@@ -11,7 +11,7 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-
+# Importing necessary libraries
 from captureAgents import CaptureAgent
 import random, time, util, sys
 import math
@@ -75,6 +75,7 @@ class DummyAgent(CaptureAgent):
     '''
     # This counter tells us when to hide/attack
     self.counter = 0
+    # Determines what the agent is doing
     self.inHiding = False
     self.doneHiding = False
     # Hold the coordinates for where we'll hide
@@ -86,18 +87,7 @@ class DummyAgent(CaptureAgent):
     Your initialization code goes here, if you need any.
     '''
 
-  # def chooseAction(self, gameState):
-  #   """
-  #   Picks among actions randomly.
-  #   """
-  #   if self.counter == 0:
-  #     return self.findPath(gameState, ())
-
-  #   return self.findPath(gameState, (10,11))
-
-    # nearestFood = self.findNearestFood(gameState)
-    # return self.findPath(gameState,nearestFood)
-
+  # Find the nearest food from the agent
   def findNearestFood(self, gameState):
     nearestFoodDistance = 9999
     nearestFood = (1,1)
@@ -108,6 +98,7 @@ class DummyAgent(CaptureAgent):
         nearestFood = food
     return nearestFood
 
+  # Returns the action that gets us closer to the given position
   def findPath(self, gameState, position):
     bestDist = 9999
     actions = gameState.getLegalActions(self.index)
@@ -120,6 +111,7 @@ class DummyAgent(CaptureAgent):
         bestDist = dist
     return bestAction
 
+  # Get potential successors, used to help determine a move
   def getSuccessor(self, gameState, action):
     successor = gameState.generateSuccessor(self.index, action)
     pos = successor.getAgentState(self.index).getPosition()
@@ -128,10 +120,8 @@ class DummyAgent(CaptureAgent):
     else:
       return successor
 
-  
-  #Determine which color team is, this is used to determine hiding location
+  # Determine which color team is, this is used to determine hiding location
   def getColor(self, gameState):
-    # self.start = gameState.getAgentPosition(self.index)
     # Red team starts at x = 1, blue is at x = 30 
     if self.start[0] < 2:
       return "Red"
@@ -142,38 +132,32 @@ class NorthAgent(DummyAgent):
 
   def chooseAction(self, gameState):
 
-    team = self.getTeam(gameState)
-    opp = self.getOpponents(gameState)
+    # List of legal actions
     actions = gameState.getLegalActions(self.index)
     
+    # Determine if we're hiding
     if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
       self.inHiding = True
     
     if self.inHiding == True:
       turnsToWait = 10
-      # if self.counter == numturns to wait
-        # hiding = false
-        # return collect food
-        # increment turn counter
+      # Check if we're ready to move out of hiding
       if self.counter == turnsToWait:
         self.inHiding = False
         self.doneHiding = True
         # FIXME return collect food
-      # else
-      # return stop and increment counter
+      # else return stop and increment counter
       else:
         self.counter += 1
         return 'Stop'
 
-    #Get hiding location and go there
+    # Get hiding location and go there
     if self.inHiding == False and self.doneHiding == False:
       if self.getColor(gameState) == "Red": # Red team
-        # Used to determine x coordinate of hiding location
-        blueStart = gameState.getAgentPosition(opp[0])
-        # X is 14 and Y is 14/13
+        # X is 14 and Y is 14
         self.hidingSpotList = list(self.hidingSpot)
         self.hidingSpotList[0] = 14
-        self.hidingSpotList[1] = self.start[1]
+        self.hidingSpotList[1] = 14
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)
       elif self.getColor(gameState) == "Blue": # Blue Team
@@ -184,18 +168,20 @@ class NorthAgent(DummyAgent):
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)
 
-    # # Generic Attacking/Defending
+    # FIXME Generic Attacking/Defending
     # if self.inHiding == False and gameState.getAgentState(self.index).numCarrying < 10 and self.getScore() <= 0:
     #   # Collect Food
-    
+
     # if gameState.getAgentState(self.index).numCarrying > 10:
     #   # Return to base
 
     # if self.getScore() > 0:
     #   # Play Defense
 
+    #DELETE LATER
     return random.choice(actions)
 
+  # Get list of features
   def getFeatures(self, gameState, action):
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
@@ -222,6 +208,7 @@ class NorthAgent(DummyAgent):
           features['closeEnemy'] = 1
     return features
 
+  # Get weights
   def getWeights(self, gameState, action):
     return {'successorScore': 100, 'distanceToFood': -1, 'risk': -1, 'closeEnemy': -100}
 
@@ -229,35 +216,28 @@ class SouthAgent(DummyAgent):
 
   def chooseAction(self, gameState):
 
-    team = self.getTeam(gameState)
-    opp = self.getOpponents(gameState)
+    #List of legal actions
     actions = gameState.getLegalActions(self.index)
+
+    # Determine whether we're in hiding place
     if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
       self.inHiding = True
       self.doneHiding = True
       
     if self.inHiding == True:
       turnsToWait = 10
-      # if self.counter == numturns to wait
-        # hiding = false
-        # return stop action
-        # increment turn counter
+      # Leave hiding spot after number of turns
       if self.counter == turnsToWait:
         self.inHiding = False
-      # else
-      #  increment counter and return stop action
+      # increment counter and return stop action
       else:
         self.counter += 1
-        # actions = gameState.getLegalActions(self.index)
         return 'Stop'
         
 
     #Get hiding location and go there
     if self.inHiding == False and self.doneHiding == False:
-      print(self.getColor(gameState))
       if self.getColor(gameState) == "Red": # Red team
-        # Used to determine x coordinate of hiding location
-        blueStart = gameState.getAgentPosition(opp[0])
         # X is 14 and Y is 1 or 2
         self.hidingSpotList = list(self.hidingSpot)
         self.hidingSpotList[0] = 14
@@ -265,11 +245,6 @@ class SouthAgent(DummyAgent):
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)
       elif self.getColor(gameState) == "Blue": # Blue Team
-        # Used to determine y coordinate of hiding location
-        redStart = gameState.getAgentPosition(opp[0])
-        print(opp[0])
-        print(redStart)
-        print(type(redStart))
         # X is 16 and Y is 1 or 2
         self.hidingSpotList = list(self.hidingSpot)
         self.hidingSpotList[0] = self.start[0]/2 + 1
@@ -277,7 +252,7 @@ class SouthAgent(DummyAgent):
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)
     
-    # # Generic Attacking/Defending
+    # FIXME Generic Attacking/Defending
     # if self.inHiding == False and gameState.getAgentState(self.index).numCarrying < 10 and self.getScore() <= 0:
     #   # Collect Food
     
@@ -287,8 +262,10 @@ class SouthAgent(DummyAgent):
     # if self.getScore() > 0:
     #   # Play Defense
     
+    #FIXME DELETE LATER 
     return random.choice(actions)
 
+  # Get list of features 
   def getFeatures(self, gameState, action):
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
@@ -319,5 +296,6 @@ class SouthAgent(DummyAgent):
 
     return features
 
+  # Get weights
   def getWeights(self, gameState, action):
     return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -20, 'stop': -100, 'reverse': -4}

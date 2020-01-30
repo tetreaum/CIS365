@@ -176,18 +176,25 @@ class NorthAgent(DummyAgent):
         return self.findPath(gameState, self.hidingSpot)
       
     
-    #Generic Attacking
-    if self.inHiding == False:
+    # Generic Attacking/Defending
+    if self.inHiding == False and gameState.getAgentState(self.index).numCarrying < 10 and self.getScore() <= 0:
+      # Collect Food
+    
+    if gameState.getAgentState(self.index).numCarrying > 10:
+      # Return to base
+
+    if self.getScore() > 0:
+      # Play Defense
      
 	def getFeatures(self, gameState, action):
-	    features = util.Counter()
-	    successor = self.getSuccessor(gameState, action)
+	  features = util.Counter()
+	  successor = self.getSuccessor(gameState, action)
 		
-	myState = successor.getAgentState(self.index)
-	myPos = myState.getPosition()
+	  myState = successor.getAgentState(self.index)
+	  myPos = myState.getPosition()
 		
-	foodList = self.getFood(successor).asList()
-	features['successorScore'] = -len(foodList)
+	  foodList = self.getFood(successor).asList()
+	  features['successorScore'] = -len(foodList)
 	
     # Compute distance to the nearest food
     if len(foodList) > 0: 
@@ -248,13 +255,20 @@ class SouthAgent(DummyAgent):
         self.hidingSpot[0] = self.start[0]/2 + 1
         self.hidingspot[1] = redStart[1]
         return self.findPath(gameState, self.hidingSpot)
-    #Generic Defending
     
-   if self.hiding == False:
+    # Generic Attacking/Defending
+    if self.inHiding == False and gameState.getAgentState(self.index).numCarrying < 10 and self.getScore() <= 0:
+      # Collect Food
+    
+    if gameState.getAgentState(self.index).numCarrying > 10:
+      # Return to base
+
+    if self.getScore() > 0:
+      # Play Defense
     
 	def getFeatures(self, gameState, action):
 		features = util.Counter()
-    		successor = self.getSuccessor(gameState, action)
+    successor = self.getSuccessor(gameState, action)
 
     myState = successor.getAgentState(self.index)
     myPos = myState.getPosition()

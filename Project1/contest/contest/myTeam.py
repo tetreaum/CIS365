@@ -89,8 +89,10 @@ class DummyAgent(CaptureAgent):
     Your initialization code goes here, if you need any.
     '''
 
-  # Find the nearest food from the agent
   def findNearestFood(self, gameState):
+    """
+    Finds and returns the nearest food from the agent
+    """
     nearestFoodDistance = 9999
     nearestFood = (1,1)
     for food in self.getFood(gameState).asList():
@@ -100,21 +102,39 @@ class DummyAgent(CaptureAgent):
         nearestFood = food
     return nearestFood
 
-  # Returns the action that gets us closer to the given position
   def findPath(self, gameState, position):
+    """
+    Returns the action that gets us closer to the given position 
+    This also flags paths with an enemy ghost on them. 
+    """
     bestDist = 9999
+    enemyOnPath = False
     actions = gameState.getLegalActions(self.index)
     for action in actions:
       successor = self.getSuccessor(gameState, action)
       pos2 = successor.getAgentPosition(self.index)
+      if not enemyOnPath: # used to flag if we should go this way
+        enemyAgents = []
+        if self.getColor(gameState) == "Red": # code to get enemy agents
+          enemyAgents = gameState.getBlueTeamIndices()
+        else:
+          enemyAgents = gameState.getRedTeamIndices()
+        for agent in enemyAgents: # checking if enemy agents are on our suggested path
+          if gameState.getAgentPosition(agent) == pos2 and gameState.getAgentState(agent).scaredTimer <= 0:
+            enemyOnPath = True 
       dist = self.getMazeDistance(position,pos2)
       if dist < bestDist:
         bestAction = action
         bestDist = dist
-    return bestAction
+    if enemyOnPath:
+      return (bestAction, 1) # returns the best action AND a 1 if an enemy is on the path
+    else:
+      return (bestAction, 0) # returns the best action AND a 0 if an enemy is on the path
 
-  # Get potential successors, used to help determine a move
   def getSuccessor(self, gameState, action):
+    """
+    Get potential successors, used to help determine a move
+    """
     successor = gameState.generateSuccessor(self.index, action)
     pos = successor.getAgentState(self.index).getPosition()
     if pos != nearestPoint(pos):
@@ -122,41 +142,42 @@ class DummyAgent(CaptureAgent):
     else:
       return successor
 
-  # Determine which color team is, this is used to determine hiding location
   def getColor(self, gameState):
-    # Red team starts at x = 1, blue is at x = 30 
-    if self.start[0] < 2:
+    """
+    Determine which color team is, this is used to determine hiding location
+    """
+    if self.red == True:
       return "Red"
     else:
       return "Blue"
-
-  # Evaluate actions
-  def evaluate(self, gameState, action):
-
-    features = self.getFeatures(gameState, action)
-    weights = self.getWeights(gameState, action)
-    return features * weights
 
 class NorthAgent(DummyAgent):
 
   def chooseAction(self, gameState):
 
-    # List of legal actions
+    #List of legal actions
     actions = gameState.getLegalActions(self.index)
-    
-    # Determine if we're hiding
+    foodLeft = len(self.getFood(gameState).asList())
+    features = [self.getFeatures(gameState, a) for a in actions]
+
+    capPos = None
+    if self.getColor(gameState) == "Red":
+      capPos = gameState.getBlueCapsules()
+    else:
+      capPos = gameState.getRedCapsules()
+    #print(capPos)
+
+    # Determine whether we're in hiding place
     if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
       self.inHiding = True
-    
+      self.doneHiding = True
+      self.attacking = True
     if self.inHiding == True:
-      turnsToWait = 10
-      # Check if we're ready to move out of hiding
+      turnsToWait = 6
+      # Leave hiding spot after number of turns
       if self.counter == turnsToWait:
         self.inHiding = False
-        self.doneHiding = True
-        self.attacking = True
-        # FIXME return collect food
-      # else return stop and increment counter
+      # increment counter and return stop action
       else:
         self.counter += 1
         return 'Stop'
@@ -171,7 +192,7 @@ class NorthAgent(DummyAgent):
         while gameState.hasWall(self.hidingSpotList[0], self.hidingSpotList[1]):
           self.hidingSpotList[0] = self.hidingSpotList - 1
         self.hidingSpot = tuple(self.hidingSpotList)
-        return self.findPath(gameState, self.hidingSpot)
+        return self.findPath(gameState, self.hidingSpot)[0]
       elif self.getColor(gameState) == "Blue": # Blue Team
         # X is 16 and Y is 14 or 13
         self.hidingSpotList = list(self.hidingSpot)
@@ -180,44 +201,46 @@ class NorthAgent(DummyAgent):
         while gameState.hasWall(self.hidingSpotList[0], self.hidingSpotList[1]):
           self.hidingSpotList[0] = self.hidingSpotList + 1
         self.hidingSpot = tuple(self.hidingSpotList)
-        return self.findPath(gameState, self.hidingSpot)
+        return self.findPath(gameState, self.hidingSpot)[0]
 
-    features = [self.getFeatures(gameState, a) for a in actions]
-    weights = [self.getWeights(gameState, a) for a in actions]
-
-    # FIXME Generic Attacking/Defending
-    if self.attacking == True and gameState.getAgentState(self.index).numCarrying < 10 and self.getScore(gameState) <= 0:
+    # Food Collecting
+    if self.attacking == True and gameState.getAgentState(self.index).numCarrying < 9 and foodLeft > 2:
       # Collect Food
       # print(features)
       bestActions = []
       closeFoodPos = []
       tempPos = []
-      a = 0
+      #a = 0
       for dct in features:
         for k, v in dct.items():
           if k == 'closeFood':
             tempPos.append(dct['closeFood'])
           if k == 'distanceToFood':
             bestActions.append(v)
-            a = a + 1
+            #a = a + 1
       
       minVal = min(bestActions)
       i = bestActions.index(minVal)
       closeFoodPos = tuple(tempPos[i])
 
-      print(bestActions)
-      #bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-      return self.findPath(gameState, closeFoodPos)
+      if gameState.getAgentState(self.index).numCarrying >= 6 and len(capPos) != 0:
+        return self.findPath(gameState, capPos[0])[0]
+      else:
+        return self.findPath(gameState, closeFoodPos)[0]
+    
+    # if self.attacking == True and gameState.getAgentState(self.index).numCarrying > 6:
+    else:
+      if self.findPath(gameState, self.start)[1] != 1:
+        return self.findPath(gameState, self.start)[0]
+      elif len(capPos) != 0:
+        if self.findPath(gameState, capPos[0])[1] != 1:
+          return self.findPath(gameState, capPos[0])[0]
+      else:
+        return random.choice(actions)
 
-      # if self.attacking == True and gameState.getAgentState(self.index).numCarrying > 10:
-      #   homeBase = []
-      #   if self.getColor(gameState) == "Red":
-          
-      #   elif self.getColor(gameState) == "Blue":  
     # if self.getScore() > 0:
     #   # Play Defense
-
-    #DELETE LATER
+     
     return random.choice(actions)
 
   # Get list of features
@@ -245,20 +268,7 @@ class NorthAgent(DummyAgent):
       closeFood = tuple(closestFood)
       features['distanceToFood'] = minDistance
       features['closeFood'] = closeFood
-      
-      # features['closeEnemy'] = 0
-      # enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-      # risk = [a for a in enemies if not a.isPacman and a.getPosition != None]
-      # if len(risk) > 0:
-      #   dists = [self.getMazeDistance(myPos, a.getPosition()) for a in risk]
-      #   features['enemyDistance'] = min(dists)
-      #   if (dist <= 4 for dist in dists):
-      #     features['closeEnemy'] = 1
     return features
-
-  # Get weights
-  def getWeights(self, gameState, action):
-    return {'successorScore': 100, 'distanceToFood': -1, 'risk': -1, 'closeEnemy': -100}
 
 class SouthAgent(DummyAgent):
 
@@ -266,6 +276,15 @@ class SouthAgent(DummyAgent):
 
     #List of legal actions
     actions = gameState.getLegalActions(self.index)
+    foodLeft = len(self.getFood(gameState).asList())
+    features = [self.getFeatures(gameState, a) for a in actions]
+
+    capPos = None
+    if self.getColor(gameState) == "Red":
+      capPos = gameState.getBlueCapsules()
+    else:
+      capPos = gameState.getRedCapsules()
+    #print(capPos)
 
     # Determine whether we're in hiding place
     if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
@@ -273,7 +292,7 @@ class SouthAgent(DummyAgent):
       self.doneHiding = True
       self.attacking = True
     if self.inHiding == True:
-      turnsToWait = 10
+      turnsToWait = 6
       # Leave hiding spot after number of turns
       if self.counter == turnsToWait:
         self.inHiding = False
@@ -281,7 +300,8 @@ class SouthAgent(DummyAgent):
       else:
         self.counter += 1
         return 'Stop'
-        
+
+    #print(gameState.hasCapsule(capPos[0][0], capPos[0][1]))        
 
     #Get hiding location and go there
     if self.inHiding == False and self.doneHiding == False:
@@ -293,7 +313,7 @@ class SouthAgent(DummyAgent):
         while gameState.hasWall(self.hidingSpotList[0], self.hidingSpotList[1]):
           self.hidingSpotList[0] = self.hidingSpotList - 1
         self.hidingSpot = tuple(self.hidingSpotList)
-        return self.findPath(gameState, self.hidingSpot)
+        return self.findPath(gameState, self.hidingSpot)[0]
       elif self.getColor(gameState) == "Blue": # Blue Team
         # X is 16 and Y is 1 or 2
         self.hidingSpotList = list(self.hidingSpot)
@@ -302,14 +322,12 @@ class SouthAgent(DummyAgent):
         while gameState.hasWall(self.hidingSpotList[0], self.hidingSpotList[1]):
           self.hidingSpotList[0] = self.hidingSpotList + 1
         self.hidingSpot = tuple(self.hidingSpotList)
-        return self.findPath(gameState, self.hidingSpot)
+        return self.findPath(gameState, self.hidingSpot)[0]
     
-    # FIXME Generic Attacking/Defending
-    if self.attacking == True and gameState.getAgentState(self.index).numCarrying < 10 and self.getScore(gameState) <= 0:
+    # Food Collecting
+    if self.attacking == True and gameState.getAgentState(self.index).numCarrying < 9 and foodLeft > 2:
       # Collect Food
-      features = [self.getFeatures(gameState, a) for a in actions]
-      weights = [self.getWeights(gameState, a) for a in actions]
-      print(features)
+      # print(features)
       bestActions = []
       closeFoodPos = []
       tempPos = []
@@ -326,17 +344,24 @@ class SouthAgent(DummyAgent):
       i = bestActions.index(minVal)
       closeFoodPos = tuple(tempPos[i])
 
-      print(bestActions)
-      #bestActions = [a for a, v in zip(actions, values) if v == maxValue]
-      return self.findPath(gameState, closeFoodPos)
+      if gameState.getAgentState(self.index).numCarrying >= 6 and len(capPos) != 0:
+        return self.findPath(gameState, capPos[0])[0]
+      else:
+        return self.findPath(gameState, closeFoodPos)[0]
     
-    # if gameState.getAgentState(self.index).numCarrying > 10:
-    #   # Return to base
+    # if self.attacking == True and gameState.getAgentState(self.index).numCarrying > 6:
+    else:
+      if self.findPath(gameState, self.start)[1] != 1:
+        return self.findPath(gameState, self.start)[0]
+      elif len(capPos) != 0:
+        if self.findPath(gameState, capPos[0])[1] != 1:
+          return self.findPath(gameState, capPos[0])[0]
+      else:
+        return random.choice(actions)
 
     # if self.getScore() > 0:
     #   # Play Defense
-    
-    #FIXME DELETE LATER 
+     
     return random.choice(actions)
 
   # Get list of features 
@@ -387,7 +412,3 @@ class SouthAgent(DummyAgent):
       features['reverse'] = 1
 
     return features
-
-  # Get weights
-  def getWeights(self, gameState, action):
-    return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -20, 'stop': -100, 'reverse': -4}

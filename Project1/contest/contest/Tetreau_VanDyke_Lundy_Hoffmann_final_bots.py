@@ -73,21 +73,21 @@ class DummyAgent(CaptureAgent):
     on initialization time, please take a look at
     CaptureAgent.registerInitialState in captureAgents.py.
     '''
-    # This counter tells us when to hide/attack
+    '''
+    init code is below
+    '''
+    # This is used to count turns that we are waiting
     self.counter = 0
-    # Determines what the agent is doing
+    # States to determines what the agent is doing
     self.inHiding = False
     self.doneHiding = False
     self.attacking = False
     self.defending = False
-    # Hold the coordinates for where we'll hide
+    # Holds the coordinates for where we'll hide
     self.hidingSpot = (0, 0)
     self.hidingSpotList = [0, 0]
     self.start = gameState.getAgentPosition(self.index)
     CaptureAgent.registerInitialState(self, gameState)
-    '''
-    Your initialization code goes here, if you need any.
-    '''
 
   def findNearestFood(self, gameState):
     """
@@ -144,7 +144,8 @@ class DummyAgent(CaptureAgent):
 
   def getColor(self, gameState):
     """
-    Determine which color team is, this is used to determine hiding location
+    Determine which color team is
+    This is used for determining hiding location, finding power capsules, etc
     """
     if self.red == True:
       return "Red"
@@ -267,7 +268,6 @@ class NorthAgent(DummyAgent):
           self.hidingSpotList[0] = self.hidingSpotList + 1
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)[0]
-     
     return self.foodCollection(gameState)
 
 class SouthAgent(DummyAgent):
@@ -311,6 +311,5 @@ class SouthAgent(DummyAgent):
           self.hidingSpotList[0] = self.hidingSpotList + 1
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)[0]
-
     return self.foodCollection(gameState)
 

@@ -151,10 +151,35 @@ class DummyAgent(CaptureAgent):
     else:
       return "Blue"
 
-class NorthAgent(DummyAgent):
+  # Get list of features
+  def getFeatures(self, gameState, action):
+    features = util.Counter()
+    successor = self.getSuccessor(gameState, action)
+		
+    myState = successor.getAgentState(self.index)
+    myPos = myState.getPosition()
+		
+    foodList = self.getFood(successor).asList()
+    features['successorScore'] = -len(foodList)
+	
+    # Compute distance to the nearest food
+    if len(foodList) > 0: 
+      myPos = successor.getAgentState(self.index).getPosition()
+      # minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+      # features['distanceToFood'] = minDistance
+      minDistance = 9999
+      closestFood = [0, 0]
+      for food in foodList:
+        if minDistance > self.getMazeDistance(myPos, food):
+          minDistance = self.getMazeDistance(myPos, food)
+          closestFood = food
+      closeFood = tuple(closestFood)
+      features['distanceToFood'] = minDistance
+      features['closeFood'] = closeFood
+    return features
 
-  def chooseAction(self, gameState):
-
+  def foodCollection(self, gameState):
+    
     #List of legal actions
     actions = gameState.getLegalActions(self.index)
     foodLeft = len(self.getFood(gameState).asList())
@@ -165,7 +190,40 @@ class NorthAgent(DummyAgent):
       capPos = gameState.getBlueCapsules()
     else:
       capPos = gameState.getRedCapsules()
-    #print(capPos)
+
+    # Food Collecting
+    if self.attacking == True and gameState.getAgentState(self.index).numCarrying < 9 and foodLeft > 2:
+      bestActions = []
+      closeFoodPos = []
+      tempPos = []
+      for dct in features:
+        for k, v in dct.items():
+          if k == 'closeFood':
+            tempPos.append(dct['closeFood'])
+          if k == 'distanceToFood':
+            bestActions.append(v)
+      
+      minVal = min(bestActions)
+      i = bestActions.index(minVal)
+      closeFoodPos = tuple(tempPos[i])
+
+      if gameState.getAgentState(self.index).numCarrying >= 6 and len(capPos) != 0:
+        return self.findPath(gameState, capPos[0])[0]
+      else:
+        return self.findPath(gameState, closeFoodPos)[0]
+
+    else:
+      if self.findPath(gameState, self.start)[1] != 1:
+        return self.findPath(gameState, self.start)[0]
+      elif len(capPos) != 0:
+        if self.findPath(gameState, capPos[0])[1] != 1:
+          return self.findPath(gameState, capPos[0])[0]
+      else:
+        return random.choice(actions)
+
+class NorthAgent(DummyAgent):
+
+  def chooseAction(self, gameState):
 
     # Determine whether we're in hiding place
     if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
@@ -202,89 +260,12 @@ class NorthAgent(DummyAgent):
           self.hidingSpotList[0] = self.hidingSpotList + 1
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)[0]
-
-    # Food Collecting
-    if self.attacking == True and gameState.getAgentState(self.index).numCarrying < 9 and foodLeft > 2:
-      # Collect Food
-      # print(features)
-      bestActions = []
-      closeFoodPos = []
-      tempPos = []
-      #a = 0
-      for dct in features:
-        for k, v in dct.items():
-          if k == 'closeFood':
-            tempPos.append(dct['closeFood'])
-          if k == 'distanceToFood':
-            bestActions.append(v)
-            #a = a + 1
-      
-      minVal = min(bestActions)
-      i = bestActions.index(minVal)
-      closeFoodPos = tuple(tempPos[i])
-
-      if gameState.getAgentState(self.index).numCarrying >= 6 and len(capPos) != 0:
-        return self.findPath(gameState, capPos[0])[0]
-      else:
-        return self.findPath(gameState, closeFoodPos)[0]
-    
-    # if self.attacking == True and gameState.getAgentState(self.index).numCarrying > 6:
-    else:
-      if self.findPath(gameState, self.start)[1] != 1:
-        return self.findPath(gameState, self.start)[0]
-      elif len(capPos) != 0:
-        if self.findPath(gameState, capPos[0])[1] != 1:
-          return self.findPath(gameState, capPos[0])[0]
-      else:
-        return random.choice(actions)
-
-    # if self.getScore() > 0:
-    #   # Play Defense
      
-    return random.choice(actions)
-
-  # Get list of features
-  def getFeatures(self, gameState, action):
-    features = util.Counter()
-    successor = self.getSuccessor(gameState, action)
-		
-    myState = successor.getAgentState(self.index)
-    myPos = myState.getPosition()
-		
-    foodList = self.getFood(successor).asList()
-    features['successorScore'] = -len(foodList)
-	
-    # Compute distance to the nearest food
-    if len(foodList) > 0: 
-      myPos = successor.getAgentState(self.index).getPosition()
-      # minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-      # features['distanceToFood'] = minDistance
-      minDistance = 9999
-      closestFood = [0, 0]
-      for food in foodList:
-        if minDistance > self.getMazeDistance(myPos, food):
-          minDistance = self.getMazeDistance(myPos, food)
-          closestFood = food
-      closeFood = tuple(closestFood)
-      features['distanceToFood'] = minDistance
-      features['closeFood'] = closeFood
-    return features
+    return self.foodCollection(gameState)
 
 class SouthAgent(DummyAgent):
 
   def chooseAction(self, gameState):
-
-    #List of legal actions
-    actions = gameState.getLegalActions(self.index)
-    foodLeft = len(self.getFood(gameState).asList())
-    features = [self.getFeatures(gameState, a) for a in actions]
-
-    capPos = None
-    if self.getColor(gameState) == "Red":
-      capPos = gameState.getBlueCapsules()
-    else:
-      capPos = gameState.getRedCapsules()
-    #print(capPos)
 
     # Determine whether we're in hiding place
     if self.hidingSpot[0] == gameState.getAgentPosition(self.index)[0] and self.hidingSpot[1] == gameState.getAgentPosition(self.index)[1]:
@@ -299,9 +280,7 @@ class SouthAgent(DummyAgent):
       # increment counter and return stop action
       else:
         self.counter += 1
-        return 'Stop'
-
-    #print(gameState.hasCapsule(capPos[0][0], capPos[0][1]))        
+        return 'Stop'     
 
     #Get hiding location and go there
     if self.inHiding == False and self.doneHiding == False:
@@ -323,92 +302,6 @@ class SouthAgent(DummyAgent):
           self.hidingSpotList[0] = self.hidingSpotList + 1
         self.hidingSpot = tuple(self.hidingSpotList)
         return self.findPath(gameState, self.hidingSpot)[0]
-    
-    # Food Collecting
-    if self.attacking == True and gameState.getAgentState(self.index).numCarrying < 9 and foodLeft > 2:
-      # Collect Food
-      # print(features)
-      bestActions = []
-      closeFoodPos = []
-      tempPos = []
-      #a = 0
-      for dct in features:
-        for k, v in dct.items():
-          if k == 'closeFood':
-            tempPos.append(dct['closeFood'])
-          if k == 'distanceToFood':
-            bestActions.append(v)
-            #a = a + 1
-      
-      minVal = min(bestActions)
-      i = bestActions.index(minVal)
-      closeFoodPos = tuple(tempPos[i])
 
-      if gameState.getAgentState(self.index).numCarrying >= 6 and len(capPos) != 0:
-        return self.findPath(gameState, capPos[0])[0]
-      else:
-        return self.findPath(gameState, closeFoodPos)[0]
-    
-    # if self.attacking == True and gameState.getAgentState(self.index).numCarrying > 6:
-    else:
-      if self.findPath(gameState, self.start)[1] != 1:
-        return self.findPath(gameState, self.start)[0]
-      elif len(capPos) != 0:
-        if self.findPath(gameState, capPos[0])[1] != 1:
-          return self.findPath(gameState, capPos[0])[0]
-      else:
-        return random.choice(actions)
+    return self.foodCollection(gameState)
 
-    # if self.getScore() > 0:
-    #   # Play Defense
-     
-    return random.choice(actions)
-
-  # Get list of features 
-  def getFeatures(self, gameState, action):
-    features = util.Counter()
-    successor = self.getSuccessor(gameState, action)
-
-    myState = successor.getAgentState(self.index)
-    myPos = myState.getPosition()
-
-    foodList = self.getFood(successor).asList()
-    features['successorScore'] = -len(foodList)
-
-    # Computes whether we're on defense (1) or offense (0)
-    features['onDefense'] = 1
-    if myState.isPacman: 
-      features['onDefense'] = 0
-
-    # Computes closest food
-    if len(foodList) > 0: 
-      myPos = successor.getAgentState(self.index).getPosition()
-      # minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-      # features['distanceToFood'] = minDistance
-      minDistance = 9999
-      closestFood = [0, 0]
-      for food in foodList:
-        if minDistance > self.getMazeDistance(myPos, food):
-          minDistance = self.getMazeDistance(myPos, food)
-          closestFood = food
-      closeFood = tuple(closestFood)
-      features['distanceToFood'] = minDistance
-      features['closeFood'] = closeFood
-
-    # Computes distance to invaders we can see
-    enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-    invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
-    features['numInvaders'] = len(invaders)
-    
-    if len(invaders) > 0:
-      dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-      features['invaderDistance'] = min(dists)
-      features['reverse'] = -1
-
-    if action == Directions.STOP: 
-      features['stop'] = 1
-    rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
-    if action == rev: 
-      features['reverse'] = 1
-
-    return features
